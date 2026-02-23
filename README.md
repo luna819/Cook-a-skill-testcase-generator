@@ -71,7 +71,3 @@ repo-name/
 
 ---
 
-## Author
-
-> Built as part of **Cook A Skill** — An internal program for practicing AI Skill development in QC workflows.  
-> Supervisor: **Hân (Hano)** — QA Manager
