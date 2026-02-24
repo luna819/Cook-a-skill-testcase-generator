@@ -21,7 +21,7 @@ Typical prompts:
 
 ## Workflow
 
-Follow these 4 steps in order. Do not skip any step.
+Follow these 5 steps in order. Do not skip any step.
 
 ### Step 1 — Analyze the Spec
 
@@ -33,19 +33,29 @@ Before generating any test cases, extract and internalize:
 - **Validation rules:** What is valid/invalid for each field?
 - **Business rules:** What logic governs the feature behavior?
 - **System states:** What preconditions affect the flow (e.g., logged in, role-based access)?
+- **Security triggers:** Does the spec contain free-text input fields, password fields, token-based flows, form submissions, or state-changing requests? List them — they will drive Step 2 Security Cases.
 
 > If the spec is missing critical information (e.g., no validation rules, no expected behavior defined), **stop and ask** before generating:
 > "The spec is missing information about [X]. Could you clarify before I proceed?"
 
 ### Step 2 — Generate Test Cases by Category
 
-Generate test cases across all 3 categories:
+Generate test cases across all 4 categories:
 
 | Category | Description | Target coverage |
 |---|---|---|
 | **Happy Path** | Main flows that succeed under normal conditions | All primary user flows |
 | **Edge Case** | Boundary values, limits, unusual but valid input | All fields with constraints |
 | **Negative Case** | Invalid, missing, or malformed input; unauthorized actions | All validation rules + business rules |
+| **Security Case** | Attack vectors and security vulnerabilities relevant to the spec | Triggered automatically when spec contains any of the signals below |
+
+**Security Case generation rules — trigger when spec contains:**
+- Any free-text input field (Full Name, Comment, Address...) → generate **XSS injection** test case
+- Any field queried against a database (Email, Username, ID...) → generate **SQL Injection** test case
+- Any password field + storage/hashing rule → generate **credential exposure** test case (password must not appear in URL, network log, or plain-text response)
+- Any token-based flow (email verification, password reset, session token) → generate **token integrity** test cases: (a) token reuse after first use, (b) tampered/guessed token
+- Any form that submits data to the server → generate **rate limiting** test case; if spec does not define throttle behavior, flag with ⚠️
+- Any state-changing request (create, update, delete) → generate **CSRF** test case; if spec does not mention CSRF protection, flag with ⚠️
 
 **Minimum output:** 10 test cases per spec. For complex specs, generate as many as needed for full coverage.
 
@@ -63,6 +73,26 @@ Use these definitions:
 
 Output all test cases in the structured format defined below. Number IDs sequentially starting from TC-001.
 
+### Step 5 — Anti-Hallucination Self-Check
+
+Before finalizing output, run this checklist against every generated test case:
+
+| Check | Question to ask |
+|---|---|
+| **Source exists** | Can I point to a specific section, field, rule, or user flow in the spec that this TC is based on? |
+| **Expected result is grounded** | Is the expected result derived from the spec — not from general knowledge or assumptions? |
+| **Test data is valid** | Does the test data match the constraints defined in the spec (e.g., correct length, format, allowed characters)? |
+| **No invented rules** | Am I testing a validation rule that actually appears in the spec — not one I added from general knowledge? |
+| **No invented error messages** | Are any error messages in the expected result taken directly from the spec, or clearly marked as ⚠️ if not specified? |
+
+**If any check fails:** Either remove the test case, or keep it and mark the affected field with:
+`⚠️ [field] not specified in spec — assumed based on [reason]; needs PO confirmation`
+
+**Hallucination examples to avoid:**
+- Spec defines Full Name as 2–50 chars → do NOT test "max 100 chars" without spec basis
+- Spec says "error message shown" without specifying the text → do NOT write a specific error message; write "an appropriate error message is displayed"
+- Spec mentions a Login feature → do NOT generate 2FA test cases unless 2FA is mentioned in the spec
+
 ---
 
 ## Output Format
@@ -72,8 +102,9 @@ Each test case must follow this exact structure:
 ```
 ### TC-[ID]: [Short, descriptive test case name]
 
-- **Type:** Happy Path / Edge Case / Negative Case
+- **Type:** Happy Path / Edge Case / Negative Case / Security Case
 - **Priority:** Critical / Major / Minor
+- **Spec Reference:** [Section or rule in the spec this test case is based on, e.g., "Section 3 — Password field", "BR-05"]
 - **Precondition:** [What must be true before the test begins]
 - **Steps:**
   1. [Step 1]
@@ -82,6 +113,8 @@ Each test case must follow this exact structure:
 - **Expected Result:** [What should happen — be specific]
 - **Test Data:** [Concrete example values to use, if applicable]
 ```
+
+> **`Spec Reference` is mandatory.** Every test case must cite the exact section, field, rule, or user flow in the spec it is derived from. If no part of the spec supports a test case, do not generate it.
 
 Add a horizontal rule (`---`) between each test case.
 
@@ -97,6 +130,9 @@ Group test cases by category with a header before each group:
 ...
 
 ## Negative Cases
+...
+
+## Security Cases
 ...
 ```
 
@@ -126,6 +162,8 @@ Always begin your output with this summary block before listing test cases:
   - Happy Path: [n]
   - Edge Case: [n]
   - Negative Case: [n]
+  - Security Case: [n] (or "0 — no input fields, auth flows, or tokens detected in spec")
+- **Security triggers detected:** [List which signals were found, e.g., "free-text input field (Full Name), password field (BR-05), token-based verification (Section 5)"]
 - **Coverage notes:** [Any known gaps, ambiguities, or items flagged for PO clarification]
 ```
 
@@ -133,29 +171,33 @@ Always begin your output with this summary block before listing test cases:
 
 ## Rules
 
-1. **Never hallucinate.** Only generate test cases based on what is explicitly or clearly implicitly stated in the spec.
+1. **Never hallucinate.** Every test case must have a `Spec Reference` pointing to the section, field, or rule it is derived from. If you cannot cite a source in the spec, do not generate the test case.
 2. **Be specific.** Expected results must describe concrete, observable outcomes — not vague statements like "it works correctly."
-3. **Use real test data.** Provide concrete example values in the Test Data field wherever relevant.
-4. **Flag uncertainty.** When expected behavior is unclear, mark with ⚠️ rather than guessing.
-5. **Stay in scope.** Do not generate test cases for features not mentioned in the spec.
+3. **Use real test data.** Provide concrete example values in the Test Data field wherever relevant. Test data values must respect the constraints defined in the spec.
+4. **Flag uncertainty.** When expected behavior is unclear or not specified in the spec, mark with ⚠️ rather than guessing.
+5. **Stay in scope.** Do not generate test cases for features, rules, or behaviors not mentioned in the spec — not even plausible ones.
 6. **Ask before assuming.** If the spec is missing critical information, ask first.
+7. **Always check for security triggers.** Before finalizing output, scan the spec for the 6 security signals (free-text input, DB-queried fields, passwords, tokens, form submission, state-changing requests). If any are found, generate the corresponding Security Cases — this is not optional.
+8. **Run the anti-hallucination checklist** (Step 5) on every TC before outputting. Remove or flag any TC that fails.
 
 ---
 
 ## Example Output
 
-> Input: A spec describing a Login feature with email/password, "Remember Me" checkbox, and a "Forgot Password" link.
+> Input: A spec describing a Login feature with: email/password fields, "Remember Me" checkbox, "Forgot Password" link, and a business rule that passwords are stored hashed.
 
 ---
 
 ## Test Case Summary
 
 - **Feature:** User Login
-- **Generated:** 10 test cases
+- **Generated:** 12 test cases
   - Happy Path: 3
   - Edge Case: 3
   - Negative Case: 4
-- **Coverage notes:** Behavior when account is locked after N failed attempts was not specified — flagged in TC-009.
+  - Security Case: 2
+- **Security triggers detected:** free-text email field (DB-queried → SQLi trigger), password field with hashing rule (credential exposure trigger)
+- **Coverage notes:** Account lockout after N failed attempts not specified in spec — flagged with ⚠️ in TC-009. CSRF protection not mentioned in spec — ⚠️ verify with dev team whether CSRF token is implemented.
 
 ---
 
@@ -165,6 +207,7 @@ Always begin your output with this summary block before listing test cases:
 
 - **Type:** Happy Path
 - **Priority:** Critical
+- **Spec Reference:** Section 2 — User Flow (valid credentials → redirect to Dashboard)
 - **Precondition:** User has an active account in the system
 - **Steps:**
   1. Open the Login page
@@ -180,6 +223,7 @@ Always begin your output with this summary block before listing test cases:
 
 - **Type:** Happy Path
 - **Priority:** Major
+- **Spec Reference:** Section 3 — "Remember Me" checkbox behavior
 - **Precondition:** User has an active account
 - **Steps:**
   1. Open the Login page
@@ -196,6 +240,7 @@ Always begin your output with this summary block before listing test cases:
 
 - **Type:** Happy Path
 - **Priority:** Major
+- **Spec Reference:** Section 3 — "Forgot Password" link
 - **Precondition:** User is on the Login page
 - **Steps:**
   1. Open the Login page
@@ -211,6 +256,8 @@ Always begin your output with this summary block before listing test cases:
 
 - **Type:** Edge Case
 - **Priority:** Minor
+- **Spec Reference:** Section 3 — Email field (valid email format required; no max length specified)
+  ⚠️ Maximum email length not defined in spec — assumed 254 chars per RFC 5321; needs PO confirmation
 - **Precondition:** A valid account exists with a maximum-length email address
 - **Steps:**
   1. Open the Login page
@@ -218,7 +265,7 @@ Always begin your output with this summary block before listing test cases:
   3. Enter the correct password
   4. Click "Login"
 - **Expected Result:** Login succeeds; user is redirected to the Dashboard
-- **Test Data:** email: [255-character valid email] / password: Test@1234
+- **Test Data:** email: [254-character valid email] / password: Test@1234
 
 ---
 
@@ -226,6 +273,7 @@ Always begin your output with this summary block before listing test cases:
 
 - **Type:** Edge Case
 - **Priority:** Minor
+- **Spec Reference:** Section 3 — Password field (minimum length constraint)
 - **Precondition:** A valid account exists with a minimum-length password
 - **Steps:**
   1. Open the Login page
@@ -233,7 +281,7 @@ Always begin your output with this summary block before listing test cases:
   3. Enter a password exactly at the minimum character limit
   4. Click "Login"
 - **Expected Result:** Login succeeds if password is correct
-- **Test Data:** email: test@example.com / password: Ab@1 (assuming 4-char minimum)
+- **Test Data:** email: test@example.com / password: [password at exact minimum length per spec]
 
 ---
 
@@ -241,13 +289,15 @@ Always begin your output with this summary block before listing test cases:
 
 - **Type:** Edge Case
 - **Priority:** Minor
+- **Spec Reference:** Section 3 — Email field (valid format required)
 - **Precondition:** User has an active account
 - **Steps:**
   1. Open the Login page
   2. Enter email with a leading space (e.g., " test@example.com")
   3. Enter correct password
   4. Click "Login"
-- **Expected Result:** System trims whitespace and login succeeds; OR system shows an appropriate validation error
+- **Expected Result:** System trims whitespace and login succeeds; OR an appropriate validation error is shown
+  ⚠️ Whitespace trimming behavior not specified in spec — needs PO confirmation
 - **Test Data:** email: " test@example.com" / password: Test@1234
 
 ---
@@ -258,13 +308,15 @@ Always begin your output with this summary block before listing test cases:
 
 - **Type:** Negative Case
 - **Priority:** Critical
+- **Spec Reference:** Section 2 — User Flow (invalid credentials → show error, do not redirect)
 - **Precondition:** User has an active account
 - **Steps:**
   1. Open the Login page
   2. Enter a valid email address
   3. Enter an incorrect password
   4. Click "Login"
-- **Expected Result:** Error message is shown ("Email or password is incorrect"); user is NOT redirected; no session is created
+- **Expected Result:** An appropriate error message is shown; user is NOT redirected; no session is created
+  ⚠️ Exact error message text not specified in spec — needs PO confirmation
 - **Test Data:** email: test@example.com / password: WrongPass999
 
 ---
@@ -273,13 +325,14 @@ Always begin your output with this summary block before listing test cases:
 
 - **Type:** Negative Case
 - **Priority:** Critical
+- **Spec Reference:** Section 2 — User Flow (invalid credentials → show error)
 - **Precondition:** None
 - **Steps:**
   1. Open the Login page
   2. Enter an email address not registered in the system
   3. Enter any password
   4. Click "Login"
-- **Expected Result:** Error message is shown; system does not reveal whether the email exists
+- **Expected Result:** An appropriate error message is shown; system does not reveal whether the email exists in the system
 - **Test Data:** email: notregistered@example.com / password: AnyPass123
 
 ---
@@ -288,12 +341,14 @@ Always begin your output with this summary block before listing test cases:
 
 - **Type:** Negative Case
 - **Priority:** Critical
+- **Spec Reference:** Section 3 — Email and Password fields (both required)
 - **Precondition:** None
 - **Steps:**
   1. Open the Login page
   2. Leave both email and password fields empty
   3. Click "Login"
 - **Expected Result:** Validation errors appear for both fields; form is not submitted
+  ⚠️ Account lockout after repeated failed attempts not specified in spec — needs PO confirmation
 - **Test Data:** email: (empty) / password: (empty)
 
 ---
@@ -302,11 +357,45 @@ Always begin your output with this summary block before listing test cases:
 
 - **Type:** Negative Case
 - **Priority:** Major
+- **Spec Reference:** Section 3 — Email field (must be valid email format)
 - **Precondition:** None
 - **Steps:**
   1. Open the Login page
   2. Enter a string that is not a valid email format
   3. Enter any password
   4. Click "Login"
-- **Expected Result:** Inline validation error shown on the email field ("Please enter a valid email address"); form is not submitted
+- **Expected Result:** An appropriate inline validation error is shown on the email field; form is not submitted
+  ⚠️ Exact error message text not specified in spec — needs PO confirmation
 - **Test Data:** email: notanemail / password: Test@1234
+
+---
+
+## Security Cases
+
+### TC-011: SQL Injection attempt in email field
+
+- **Type:** Security Case
+- **Priority:** Critical
+- **Spec Reference:** Section 3 — Email field (free-text field used in DB query → SQLi trigger)
+- **Precondition:** Login page is open
+- **Steps:**
+  1. Enter a SQL injection payload in the email field
+  2. Enter any password
+  3. Click "Login"
+- **Expected Result:** Query does not succeed; an appropriate error is shown; no database error or stack trace is exposed to the user
+- **Test Data:** email: `test@test.com' OR '1'='1` / password: AnyPass123
+
+---
+
+### TC-012: Password value must not appear in network response
+
+- **Type:** Security Case
+- **Priority:** Critical
+- **Spec Reference:** Section 4 — Business Rule: passwords are stored hashed; plain text never stored or logged
+- **Precondition:** Browser DevTools is open; Login page is open
+- **Steps:**
+  1. Open the Network tab in DevTools
+  2. Enter valid credentials and click "Login"
+  3. Inspect the login request payload and all responses
+- **Expected Result:** The password value does not appear in plain text in any request URL, request body (beyond the encrypted transport layer), or server response; no password is written to logs
+- **Test Data:** email: test@example.com / password: Test@1234

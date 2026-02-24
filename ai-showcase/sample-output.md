@@ -14,7 +14,8 @@
   - Edge Case: 9 (TC-004 to TC-007, TC-021 to TC-025)
   - Negative Case: 7 (TC-008 to TC-014)
   - Security Case: 6 (TC-015 to TC-020)
-- **Coverage notes:** Behavior when user provides a non-Markdown file (PDF/Word) was listed as out of scope in spec — included as a negative case to verify the skill handles it gracefully. Speed requirement (under 2 minutes) is noted but not verifiable via manual test steps alone. Security cases (TC-015 to TC-020) were added per Supervisor feedback — these verify that the skill generates security-related test cases whenever the input spec contains user input fields, authentication flows, or token-based verification.
+- **Security triggers detected:** N/A — this output tests the skill itself; Security Cases (TC-015–TC-020) verify the skill's ability to detect and generate security test cases, not triggered by signals in the skill's own spec.
+- **Coverage notes:** Behavior when user provides a non-Markdown file (PDF/Word) was listed as out of scope in spec — included as a negative case to verify the skill handles it gracefully. Speed requirement (under 2 minutes) is noted but not verifiable via manual test steps alone. Security cases (TC-015 to TC-020) verify that the skill generates security-related test cases whenever the input spec contains user input fields, authentication flows, or token-based verification.
 
 ---
 
@@ -24,12 +25,13 @@
 
 - **Type:** Happy Path
 - **Priority:** Critical
+- **Spec Reference:** spec.md Section 3 (In Scope) + Section 8 DoD — skill must generate ≥10 fully structured TCs from any valid .md spec; output must include all required fields
 - **Precondition:** The skill is loaded into an AI tool (Claude Project / Custom GPT / Dify); user has a valid `.md` spec file with feature description, user flows, input fields, validation rules, and business rules
 - **Steps:**
   1. Open the AI tool with the skill loaded
   2. Paste or attach the `spec.md` content
   3. Send the prompt: "Generate test cases for this spec"
-- **Expected Result:** Skill outputs a Test Case Summary block followed by grouped test cases (Happy Path / Edge Case / Negative Case); at least 10 test cases are generated; each case contains ID, Type, Priority, Precondition, Steps, Expected Result, and Test Data
+- **Expected Result:** Skill outputs a Test Case Summary block followed by grouped test cases (Happy Path / Edge Case / Negative Case / Security Case); at least 10 test cases are generated; each case contains ID, Type, Priority, Spec Reference, Precondition, Steps, Expected Result, and Test Data
 - **Test Data:** Use `ai-showcase/sample-spec.md` (User Registration spec)
 
 ---
@@ -38,6 +40,7 @@
 
 - **Type:** Happy Path
 - **Priority:** Major
+- **Spec Reference:** spec.md Section 4 Input — "Testing type: Functional / UI / API (optional)"
 - **Precondition:** Skill is loaded; user has a valid `spec.md`
 - **Steps:**
   1. Paste the spec content
@@ -51,6 +54,7 @@
 
 - **Type:** Happy Path
 - **Priority:** Major
+- **Spec Reference:** spec.md Section 4 Input — "Priority focus: which module needs the most thorough testing (optional)"
 - **Precondition:** Skill is loaded; spec describes multiple modules (e.g., Registration + Login)
 - **Steps:**
   1. Paste the spec content
@@ -66,6 +70,7 @@
 
 - **Type:** Edge Case
 - **Priority:** Major
+- **Spec Reference:** SKILL.md Edge Case Handling — "No input fields or validation described → generate flow-based test cases only; note the limitation at the top of output"
 - **Precondition:** Skill is loaded
 - **Steps:**
   1. Paste a spec that contains only a brief feature description and a basic user flow — no input fields, no validation rules, no business rules
@@ -79,6 +84,7 @@
 
 - **Type:** Edge Case
 - **Priority:** Major
+- **Spec Reference:** SKILL.md Step 2 Edge Case Handling — "Complex validation rules → generate boundary test cases (min-1, min, min+1, max-1, max, max+1)"
 - **Precondition:** Skill is loaded; spec contains a field with multiple constraints (e.g., length min/max + character type rules)
 - **Steps:**
   1. Paste a spec where a Password field has rules: 8–32 chars, must contain uppercase, lowercase, number, special character
@@ -92,6 +98,7 @@
 
 - **Type:** Edge Case
 - **Priority:** Minor
+- **Spec Reference:** SKILL.md Edge Case Handling — "Spec describes multiple features → separate them, generate TCs per feature with a section header for each"
 - **Precondition:** Skill is loaded
 - **Steps:**
   1. Paste a spec that describes both a Login feature and a Forgot Password feature in the same document
@@ -105,6 +112,7 @@
 
 - **Type:** Edge Case
 - **Priority:** Minor
+- **Spec Reference:** SKILL.md Trigger — skill activates when user provides a .md spec file; no language restriction stated
 - **Precondition:** Skill is loaded
 - **Steps:**
   1. Paste a spec written entirely in Vietnamese
@@ -120,6 +128,7 @@
 
 - **Type:** Negative Case
 - **Priority:** Critical
+- **Spec Reference:** SKILL.md Step 1 + Edge Case Handling — "Spec too short or vague → ask: 'The spec is missing info about [X], can you clarify?'"
 - **Precondition:** Skill is loaded
 - **Steps:**
   1. Paste a spec with only 1–2 sentences and no user flow, no fields, no rules (e.g., "This feature allows users to manage their profile.")
@@ -133,6 +142,7 @@
 
 - **Type:** Negative Case
 - **Priority:** Major
+- **Spec Reference:** SKILL.md Edge Case Handling — "Ambiguous or undefined expected behavior → flag with ⚠️ Expected result needs clarification from PO"
 - **Precondition:** Skill is loaded; spec contains a rule without a defined outcome
 - **Steps:**
   1. Paste a spec where one rule has an undefined or vague expected outcome
@@ -146,6 +156,7 @@
 
 - **Type:** Negative Case
 - **Priority:** Critical
+- **Spec Reference:** SKILL.md Trigger — skill requires a .md spec file as input; empty input does not meet trigger condition
 - **Precondition:** Skill is loaded
 - **Steps:**
   1. Send only the prompt: "Generate test cases" with no spec content attached or pasted
@@ -158,6 +169,7 @@
 
 - **Type:** Negative Case
 - **Priority:** Major
+- **Spec Reference:** spec.md Section 9 Limitations — "Only processes .md spec files; PDF/Word/Confluence not supported"
 - **Precondition:** Skill is loaded
 - **Steps:**
   1. Paste content that is clearly from a non-Markdown source or send a message saying "I'm attaching a PDF"
@@ -171,6 +183,7 @@
 
 - **Type:** Negative Case
 - **Priority:** Minor
+- **Spec Reference:** SKILL.md Rule 5 — "Stay in scope. Do not generate test cases for features not mentioned in the spec"; SKILL.md Step 1 — analyze main feature and user flows
 - **Precondition:** Skill is loaded
 - **Steps:**
   1. Paste a spec describing a DevOps/infrastructure task (e.g., "Set up a Kubernetes cluster with 3 nodes")
@@ -184,6 +197,7 @@
 
 - **Type:** Negative Case
 - **Priority:** Critical
+- **Spec Reference:** spec.md Section 8 DoD — "Feed any spec.md → output at least 10 fully structured test cases"; SKILL.md Step 2 — minimum 10 TCs per spec
 - **Precondition:** Skill is loaded; a complex spec (5+ flows, 5+ fields) is provided
 - **Steps:**
   1. Paste the User Registration sample spec (7 fields, 5 business rules, multi-step flow)
@@ -197,11 +211,12 @@
 
 - **Type:** Negative Case
 - **Priority:** Critical
+- **Spec Reference:** spec.md Section 8 DoD — "Each test case has: ID, type, priority, Spec Reference, precondition, steps, expected result"; SKILL.md Output Format — all 7 fields mandatory
 - **Precondition:** Skill is loaded and has generated output
 - **Steps:**
   1. Provide any valid spec
   2. Review each generated test case in the output
-- **Expected Result:** Every test case contains all 6 required fields: ID, Type, Priority, Precondition, Steps (at least 1 step), Expected Result; no field is blank or omitted; "Test Data" field is present even if value is "N/A"
+- **Expected Result:** Every test case contains all 7 required fields: ID, Type, Priority, Spec Reference, Precondition, Steps (at least 1 step), Expected Result; no field is blank or omitted; "Test Data" field is present even if value is "N/A"
 - **Test Data:** Any spec
 
 ---
@@ -212,12 +227,13 @@
 
 - **Type:** Security Case
 - **Priority:** Critical
+- **Spec Reference:** SKILL.md Step 2 Security Rules — "Any free-text input field → generate XSS injection test case"
 - **Precondition:** Skill is loaded; spec contains at least one free-text input field (e.g., Full Name, Address, Comment)
 - **Steps:**
   1. Paste the User Registration spec (`sample-spec.md`) containing the Full Name field
   2. Send: "Generate test cases for this spec"
   3. Review the output for security-related test cases
-- **Expected Result:** Skill generates at least one XSS test case for the Full Name field with test data containing a script tag (e.g., `<script>alert('XSS')</script>`); expected result states that input must be rejected or sanitized and no script executes; case is labeled **Security** with priority **Critical**
+- **Expected Result:** Skill generates at least one XSS test case for the Full Name field with test data containing a script tag (e.g., `<script>alert('XSS')</script>`); expected result states that input must be rejected or sanitized and no script executes; case is labeled **Security Case** with priority **Critical**
 - **Test Data:** Full Name: `<script>alert('XSS')</script>`
 
 ---
@@ -226,6 +242,7 @@
 
 - **Type:** Security Case
 - **Priority:** Critical
+- **Spec Reference:** SKILL.md Step 2 Security Rules — "Any field queried against a database → generate SQL Injection test case"
 - **Precondition:** Skill is loaded; spec contains an Email or text field that is queried against a database
 - **Steps:**
   1. Paste the User Registration spec; Email field is present and used for duplicate-check query (BR-01)
@@ -240,12 +257,13 @@
 
 - **Type:** Security Case
 - **Priority:** Critical
+- **Spec Reference:** SKILL.md Step 2 Security Rules — "Any password field + storage/hashing rule → generate credential exposure test case"
 - **Precondition:** Skill is loaded; spec contains a Password field and references data storage (BR-05: passwords stored hashed)
 - **Steps:**
   1. Paste the User Registration spec
   2. Send: "Generate test cases for this spec"
   3. Look for cases related to password handling and storage
-- **Expected Result:** Skill generates at least one test case verifying that: (a) the password value does not appear in the URL or any network response, (b) the password is not stored or logged in plain text; expected result references BR-05; case is labeled **Security / Critical**
+- **Expected Result:** Skill generates at least one test case verifying that: (a) the password value does not appear in the URL or any network response, (b) the password is not stored or logged in plain text; expected result references BR-05; case is labeled **Security Case / Critical**
 - **Test Data:** Monitor network requests during registration; check server logs if accessible
 
 ---
@@ -254,6 +272,7 @@
 
 - **Type:** Security Case
 - **Priority:** Critical
+- **Spec Reference:** SKILL.md Step 2 Security Rules — "Any token-based flow → generate token integrity test cases: (a) token reuse after first use, (b) tampered/guessed token"
 - **Precondition:** Skill is loaded; spec describes an email verification flow with a unique token link (Section 5 of sample-spec.md)
 - **Steps:**
   1. Paste the User Registration spec
@@ -262,7 +281,7 @@
 - **Expected Result:** Skill generates the following token security cases:
   - Clicking an already-used verification link → system must invalidate it after first use and show an appropriate message
   - Clicking a verification link with a tampered/guessed token (e.g., incrementing the token value) → system rejects it
-  Both cases are labeled **Security / Critical**
+  Both cases are labeled **Security Case / Critical**
 - **Test Data:** (a) Re-use the same verification link after account is verified; (b) Manually alter the `token=` parameter in the URL
 
 ---
@@ -271,6 +290,7 @@
 
 - **Type:** Security Case
 - **Priority:** Major
+- **Spec Reference:** SKILL.md Step 2 Security Rules — "Any form that submits data to the server → generate rate limiting test case; if spec does not define throttle behavior, flag with ⚠️"
 - **Precondition:** Skill is loaded; spec describes a form with a submission action (Registration, Login, etc.)
 - **Steps:**
   1. Paste the User Registration spec
@@ -285,12 +305,13 @@
 
 - **Type:** Security Case
 - **Priority:** Major
+- **Spec Reference:** SKILL.md Step 2 Security Rules — "Any state-changing request (create, update, delete) → generate CSRF test case; if spec does not mention CSRF protection, flag with ⚠️"
 - **Precondition:** Skill is loaded; spec describes a form that modifies data on the server (account creation, profile update, etc.)
 - **Steps:**
   1. Paste the User Registration spec
   2. Send: "Generate test cases for this spec"
   3. Review for CSRF-related test cases
-- **Expected Result:** Skill generates a CSRF test case: sending the registration POST request from an external origin without a valid CSRF token → server must reject the request (HTTP 403 or equivalent); test case is labeled **Security / Major**; if CSRF is not mentioned in spec, skill adds a note: "⚠️ CSRF protection not specified in spec — verify with dev team"
+- **Expected Result:** Skill generates a CSRF test case: sending the registration POST request from an external origin without a valid CSRF token → server must reject the request (HTTP 403 or equivalent); test case is labeled **Security Case / Major**; if CSRF is not mentioned in spec, skill adds a note: "⚠️ CSRF protection not specified in spec — verify with dev team"
 - **Test Data:** Craft a cross-origin POST request to `/register` endpoint using Postman or a custom HTML form hosted on a different domain
 
 ---
@@ -301,6 +322,7 @@
 
 - **Type:** Edge Case
 - **Priority:** Major
+- **Spec Reference:** SKILL.md Step 2 — "Edge Case: boundary values for all fields with constraints"; sample-spec.md Section 3 — Full Name field (2–50 characters, letters and spaces only)
 - **Precondition:** Skill is loaded; spec defines Full Name as 2–50 characters, letters and spaces only
 - **Steps:**
   1. Paste the User Registration spec
@@ -321,6 +343,7 @@
 
 - **Type:** Edge Case
 - **Priority:** Major
+- **Spec Reference:** SKILL.md Step 2 — "Edge Case: boundary values"; sample-spec.md Section 3 — Date of Birth (user must be at least 18 years old)
 - **Precondition:** Skill is loaded; spec defines Date of Birth with minimum age of 18 years
 - **Steps:**
   1. Paste the User Registration spec
@@ -339,6 +362,7 @@
 
 - **Type:** Edge Case
 - **Priority:** Minor
+- **Spec Reference:** SKILL.md Step 2 — "Edge Case: boundary values"; sample-spec.md Section 3 — Phone Number (optional; 10 digits, numbers only, must start with 0)
 - **Precondition:** Skill is loaded; spec defines Phone Number as optional with rules: 10 digits, starts with 0
 - **Steps:**
   1. Paste the User Registration spec
@@ -359,6 +383,7 @@
 
 - **Type:** Edge Case
 - **Priority:** Major
+- **Spec Reference:** sample-spec.md BR-02 (link valid 24 hours) + BR-03 (resend option after expiry); SKILL.md Step 2 — user flow coverage
 - **Precondition:** Skill is loaded; spec defines verification link as valid for 24 hours (BR-02, BR-03)
 - **Steps:**
   1. Paste the User Registration spec
@@ -376,6 +401,7 @@
 
 - **Type:** Edge Case
 - **Priority:** Minor
+- **Spec Reference:** sample-spec.md Section 6 UI/UX Notes — "button disabled until all required fields filled; inline errors shown on blur (when user leaves a field); loading spinner on submit"
 - **Precondition:** Skill is loaded; spec defines: button disabled until all required fields filled; inline errors shown on blur (not on keypress)
 - **Steps:**
   1. Paste the User Registration spec

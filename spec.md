@@ -33,7 +33,7 @@ Current QC test case writing process:
 - Accept a `spec.md` file describing a feature or module as input
 - Analyze the spec and automatically generate test cases
 - Categorize cases: happy path / edge case / negative case / security case
-- Each test case includes: ID, name, precondition, steps, expected result, priority
+- Each test case includes: ID, name, type, priority, **Spec Reference**, precondition, steps, expected result
 - Output in Markdown table or structured list format
 - **Security coverage:** When the spec contains user input fields, authentication, or data storage rules, the skill MUST generate security-related test cases including:
   - Injection attacks (XSS, SQL Injection) for any free-text input field
@@ -72,16 +72,19 @@ Each generated test case follows this structure:
 ```
 ### TC-[ID]: [Test case name]
 
-- **Type:** Happy Path / Edge Case / Negative Case
+- **Type:** Happy Path / Edge Case / Negative Case / Security Case
 - **Priority:** Critical / Major / Minor
+- **Spec Reference:** [Section, field, or rule in the spec this TC is based on]
 - **Precondition:** [Conditions before execution]
 - **Steps:**
   1. [Step 1]
   2. [Step 2]
   ...
-- **Expected Result:** [What should happen]
+- **Expected Result:** [What should happen — specific and observable]
 - **Test Data:** [Suggested test data if applicable]
 ```
+
+> `Spec Reference` is mandatory. If a test case cannot be traced back to a specific section, field, or rule in the spec, it must not be generated.
 
 **Example output for a Login feature:**
 
@@ -90,6 +93,7 @@ Each generated test case follows this structure:
 
 - **Type:** Happy Path
 - **Priority:** Critical
+- **Spec Reference:** Section 2 — User Flow (step 4: valid credentials → redirect to Dashboard)
 - **Precondition:** User has an active account in the system
 - **Steps:**
   1. Open the Login page
@@ -105,14 +109,31 @@ Each generated test case follows this structure:
 
 - **Type:** Negative Case
 - **Priority:** Critical
+- **Spec Reference:** Section 3 — Validation Rules (password mismatch → show error)
 - **Precondition:** User has an active account
 - **Steps:**
   1. Open the Login page
   2. Enter a valid email
   3. Enter an incorrect password
   4. Click the "Login" button
-- **Expected Result:** Error message "Email or password is incorrect" is shown; no redirect occurs
+- **Expected Result:** An appropriate error message is displayed; user is not redirected
+  ⚠️ Exact error message text not specified in spec — needs confirmation from PO
 - **Test Data:** email: test@example.com / password: WrongPass123
+
+---
+
+### TC-003: XSS attempt in email field
+
+- **Type:** Security Case
+- **Priority:** Critical
+- **Spec Reference:** Section 3 — Email field (free-text input queried against DB → XSS + SQLi triggers)
+- **Precondition:** Login page is open
+- **Steps:**
+  1. Enter `<script>alert('XSS')</script>` in the email field
+  2. Enter any password
+  3. Click "Login"
+- **Expected Result:** Input is rejected or sanitized; no script executes; an appropriate validation error is shown
+- **Test Data:** email: `<script>alert('XSS')</script>` / password: AnyPass123
 ```
 
 ---
@@ -127,11 +148,14 @@ Each generated test case follows this structure:
   - List all user flows
   - Identify input fields & validation rules
   - Identify business rules
+  - Detect security triggers (free-text fields, passwords, tokens, form submissions)
        ↓
 [Step 2] Generate test cases by category
   - Happy path: main success flows
   - Edge case: boundary values, limit scenarios
   - Negative case: wrong, missing, or invalid input
+  - Security case: XSS, SQLi, credential exposure, token integrity, rate limiting, CSRF
+    (auto-triggered based on security signals found in Step 1)
        ↓
 [Step 3] Assign priority
   - Critical: main flows, severe impact if failed
@@ -140,7 +164,15 @@ Each generated test case follows this structure:
        ↓
 [Step 4] Format output
   - Structured Markdown
-  - Has ID, all fields complete, easy to copy into a sheet
+  - Has ID, all fields complete, Spec Reference field mandatory
+  - Easy to copy into a sheet
+       ↓
+[Step 5] Anti-hallucination self-check
+  - Every TC must cite a Spec Reference
+  - Expected results must be grounded in the spec
+  - Test data must respect constraints from the spec
+  - No invented rules, no invented error messages
+  - Flag or remove any TC that cannot be traced to the spec
        ↓
 [Output: List of test cases]
 ```
@@ -161,10 +193,13 @@ Each generated test case follows this structure:
 ## 8. Definition of Done
 
 - [ ] Feed any spec.md → output at least 10 fully structured test cases
-- [ ] Covers all 3 types: happy path, edge case, negative case
-- [ ] Each test case has: ID, type, priority, precondition, steps, expected result
+- [ ] Covers all 4 types: happy path, edge case, negative case, security case
+- [ ] Security cases auto-generated whenever spec contains: free-text input fields, passwords, tokens, form submissions, or DB-queried fields
+- [ ] Each test case has: ID, type, priority, **Spec Reference**, precondition, steps, expected result
+- [ ] Every Spec Reference points to an actual section/rule/field in the input spec
+- [ ] No invented validation rules, error messages, or behaviors not stated in the spec
+- [ ] Ambiguous or unspecified items flagged with ⚠️ — not guessed
 - [ ] Output is in Markdown and can be copied directly into a sheet
-- [ ] No hallucinated information not present in the spec
 - [ ] Speed: from spec input to output in under 2 minutes
 
 ---
