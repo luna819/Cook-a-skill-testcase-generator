@@ -32,9 +32,15 @@ Current QC test case writing process:
 ### In Scope (MVP)
 - Accept a `spec.md` file describing a feature or module as input
 - Analyze the spec and automatically generate test cases
-- Categorize cases: happy path / edge case / negative case
+- Categorize cases: happy path / edge case / negative case / security case
 - Each test case includes: ID, name, precondition, steps, expected result, priority
 - Output in Markdown table or structured list format
+- **Security coverage:** When the spec contains user input fields, authentication, or data storage rules, the skill MUST generate security-related test cases including:
+  - Injection attacks (XSS, SQL Injection) for any free-text input field
+  - Credential/token exposure (password in URL, network log, response body)
+  - Token integrity (verification links, session tokens — guessability, reuse, expiry)
+  - Rate limiting / brute force protection on form submission
+  - CSRF protection on state-changing requests
 
 ### Out of Scope (Not in MVP)
 - Direct integration with Jira / TestRail / Google Sheets

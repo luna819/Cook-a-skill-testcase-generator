@@ -9,11 +9,12 @@
 ## Test Case Summary
 
 - **Feature:** Test Case Generator AI Skill
-- **Generated:** 14 test cases
-  - Happy Path: 3
-  - Edge Case: 4
-  - Negative Case: 7
-- **Coverage notes:** Behavior when user provides a non-Markdown file (PDF/Word) was listed as out of scope in spec — included as a negative case to verify the skill handles it gracefully. Speed requirement (under 2 minutes) is noted but not verifiable via manual test steps alone.
+- **Generated:** 25 test cases
+  - Happy Path: 3 (TC-001 to TC-003)
+  - Edge Case: 9 (TC-004 to TC-007, TC-021 to TC-025)
+  - Negative Case: 7 (TC-008 to TC-014)
+  - Security Case: 6 (TC-015 to TC-020)
+- **Coverage notes:** Behavior when user provides a non-Markdown file (PDF/Word) was listed as out of scope in spec — included as a negative case to verify the skill handles it gracefully. Speed requirement (under 2 minutes) is noted but not verifiable via manual test steps alone. Security cases (TC-015 to TC-020) were added per Supervisor feedback — these verify that the skill generates security-related test cases whenever the input spec contains user input fields, authentication flows, or token-based verification.
 
 ---
 
@@ -202,3 +203,187 @@
   2. Review each generated test case in the output
 - **Expected Result:** Every test case contains all 6 required fields: ID, Type, Priority, Precondition, Steps (at least 1 step), Expected Result; no field is blank or omitted; "Test Data" field is present even if value is "N/A"
 - **Test Data:** Any spec
+
+---
+
+## Security Cases
+
+### TC-015: Spec with free-text input fields → skill generates XSS test cases
+
+- **Type:** Security Case
+- **Priority:** Critical
+- **Precondition:** Skill is loaded; spec contains at least one free-text input field (e.g., Full Name, Address, Comment)
+- **Steps:**
+  1. Paste the User Registration spec (`sample-spec.md`) containing the Full Name field
+  2. Send: "Generate test cases for this spec"
+  3. Review the output for security-related test cases
+- **Expected Result:** Skill generates at least one XSS test case for the Full Name field with test data containing a script tag (e.g., `<script>alert('XSS')</script>`); expected result states that input must be rejected or sanitized and no script executes; case is labeled **Security** with priority **Critical**
+- **Test Data:** Full Name: `<script>alert('XSS')</script>`
+
+---
+
+### TC-016: Spec with free-text input fields → skill generates SQL Injection test cases
+
+- **Type:** Security Case
+- **Priority:** Critical
+- **Precondition:** Skill is loaded; spec contains an Email or text field that is queried against a database
+- **Steps:**
+  1. Paste the User Registration spec; Email field is present and used for duplicate-check query (BR-01)
+  2. Send: "Generate test cases for this spec"
+  3. Review output for SQL Injection cases
+- **Expected Result:** Skill generates an SQL Injection test case for the Email field with test data such as `test@test.com' OR '1'='1`; expected result states the query must not succeed and an appropriate error is shown; no database error exposed to the user
+- **Test Data:** Email: `test@test.com' OR '1'='1`
+
+---
+
+### TC-017: Spec with password field → skill generates credential exposure test cases
+
+- **Type:** Security Case
+- **Priority:** Critical
+- **Precondition:** Skill is loaded; spec contains a Password field and references data storage (BR-05: passwords stored hashed)
+- **Steps:**
+  1. Paste the User Registration spec
+  2. Send: "Generate test cases for this spec"
+  3. Look for cases related to password handling and storage
+- **Expected Result:** Skill generates at least one test case verifying that: (a) the password value does not appear in the URL or any network response, (b) the password is not stored or logged in plain text; expected result references BR-05; case is labeled **Security / Critical**
+- **Test Data:** Monitor network requests during registration; check server logs if accessible
+
+---
+
+### TC-018: Spec with verification token → skill generates token security test cases
+
+- **Type:** Security Case
+- **Priority:** Critical
+- **Precondition:** Skill is loaded; spec describes an email verification flow with a unique token link (Section 5 of sample-spec.md)
+- **Steps:**
+  1. Paste the User Registration spec
+  2. Send: "Generate test cases for this spec"
+  3. Review for token-related security cases
+- **Expected Result:** Skill generates the following token security cases:
+  - Clicking an already-used verification link → system must invalidate it after first use and show an appropriate message
+  - Clicking a verification link with a tampered/guessed token (e.g., incrementing the token value) → system rejects it
+  Both cases are labeled **Security / Critical**
+- **Test Data:** (a) Re-use the same verification link after account is verified; (b) Manually alter the `token=` parameter in the URL
+
+---
+
+### TC-019: Spec with form submission → skill generates rate limiting test case
+
+- **Type:** Security Case
+- **Priority:** Major
+- **Precondition:** Skill is loaded; spec describes a form with a submission action (Registration, Login, etc.)
+- **Steps:**
+  1. Paste the User Registration spec
+  2. Send: "Generate test cases for this spec"
+  3. Review for brute force / rate limiting cases
+- **Expected Result:** Skill generates a rate limiting test case: submitting the registration form repeatedly (e.g., 20+ times in quick succession, possibly via script) → system should throttle requests or show a CAPTCHA; even if CAPTCHA is out of scope in the spec, skill flags this as "⚠️ Rate limiting behavior not defined in spec — needs clarification from PO"
+- **Test Data:** Automate form submission 20–50 times within 60 seconds using a test script or tool (e.g., Postman, JMeter)
+
+---
+
+### TC-020: Spec with state-changing form → skill generates CSRF test case
+
+- **Type:** Security Case
+- **Priority:** Major
+- **Precondition:** Skill is loaded; spec describes a form that modifies data on the server (account creation, profile update, etc.)
+- **Steps:**
+  1. Paste the User Registration spec
+  2. Send: "Generate test cases for this spec"
+  3. Review for CSRF-related test cases
+- **Expected Result:** Skill generates a CSRF test case: sending the registration POST request from an external origin without a valid CSRF token → server must reject the request (HTTP 403 or equivalent); test case is labeled **Security / Major**; if CSRF is not mentioned in spec, skill adds a note: "⚠️ CSRF protection not specified in spec — verify with dev team"
+- **Test Data:** Craft a cross-origin POST request to `/register` endpoint using Postman or a custom HTML form hosted on a different domain
+
+---
+
+## Additional Coverage Cases
+
+### TC-021: Full Name field — boundary values
+
+- **Type:** Edge Case
+- **Priority:** Major
+- **Precondition:** Skill is loaded; spec defines Full Name as 2–50 characters, letters and spaces only
+- **Steps:**
+  1. Paste the User Registration spec
+  2. Send: "Generate test cases for this spec"
+  3. Review for Full Name boundary cases
+- **Expected Result:** Skill generates the following boundary cases for Full Name:
+  - Exactly 1 character → fails (below minimum)
+  - Exactly 2 characters → passes (at minimum)
+  - Exactly 50 characters → passes (at maximum)
+  - Exactly 51 characters → fails (above maximum)
+  - Value with only spaces (e.g., `   `) → fails
+  - Value with numbers or special characters (e.g., `John3`) → fails
+- **Test Data:** (1) `A` / (2) `Jo` / (3) 50-character string of letters / (4) 51-character string / (5) `   ` / (6) `John3`
+
+---
+
+### TC-022: Date of Birth — age boundary (exactly 18 years old today)
+
+- **Type:** Edge Case
+- **Priority:** Major
+- **Precondition:** Skill is loaded; spec defines Date of Birth with minimum age of 18 years
+- **Steps:**
+  1. Paste the User Registration spec
+  2. Send: "Generate test cases for this spec"
+  3. Review for Date of Birth boundary cases
+- **Expected Result:** Skill generates the following boundary cases:
+  - DOB = today's date minus exactly 18 years → passes (exactly at minimum age)
+  - DOB = today's date minus 17 years 364 days → fails (one day short of 18)
+  - DOB = a future date → fails
+  - DOB = an obviously invalid date (e.g., February 30) → fails with validation error
+- **Test Data:** (1) `[today - 18 years]` / (2) `[today - 17 years - 364 days]` / (3) `[tomorrow's date]` / (4) `1999-02-30`
+
+---
+
+### TC-023: Phone Number — optional field behavior
+
+- **Type:** Edge Case
+- **Priority:** Minor
+- **Precondition:** Skill is loaded; spec defines Phone Number as optional with rules: 10 digits, starts with 0
+- **Steps:**
+  1. Paste the User Registration spec
+  2. Send: "Generate test cases for this spec"
+  3. Review for Phone Number cases
+- **Expected Result:** Skill generates the following cases:
+  - Phone left empty → registration succeeds (field is optional)
+  - Phone = 10 digits starting with `0` → passes
+  - Phone = 9 digits → fails
+  - Phone = 11 digits → fails
+  - Phone starting with `1` (not `0`) → fails
+  - Phone containing letters or special characters (e.g., `090-1234567`) → fails
+- **Test Data:** (1) empty / (2) `0901234567` / (3) `090123456` / (4) `09012345678` / (5) `1901234567` / (6) `090-12345`
+
+---
+
+### TC-024: Verification link — expired after 24 hours
+
+- **Type:** Edge Case
+- **Priority:** Major
+- **Precondition:** Skill is loaded; spec defines verification link as valid for 24 hours (BR-02, BR-03)
+- **Steps:**
+  1. Paste the User Registration spec
+  2. Send: "Generate test cases for this spec"
+  3. Review for verification link expiry cases
+- **Expected Result:** Skill generates the following flow cases:
+  - User clicks verification link within 24 hours → account activated, redirect to Login with success message
+  - User clicks verification link after 24 hours → link is invalid; page shows an expiry message and a "Resend verification email" option
+  - User clicks "Resend verification email" → a new email is sent; the previous link is invalidated
+- **Test Data:** (1) Click link within 24h / (2) Wait 24h+ then click original link / (3) After expiry, click resend → check new email arrives and old link no longer works
+
+---
+
+### TC-025: UI behavior — button disabled state and inline error timing
+
+- **Type:** Edge Case
+- **Priority:** Minor
+- **Precondition:** Skill is loaded; spec defines: button disabled until all required fields filled; inline errors shown on blur (not on keypress)
+- **Steps:**
+  1. Paste the User Registration spec
+  2. Send: "Generate test cases for this spec"
+  3. Review for UI behavior cases
+- **Expected Result:** Skill generates the following UI cases:
+  - Open form with all fields empty → "Create Account" button is disabled (grayed out, not clickable)
+  - Fill all required fields → button becomes enabled
+  - Click inside Full Name field, type nothing, then click away → inline error "Full Name is required" appears immediately on blur; no error shown while typing
+  - Submit successfully → button shows a loading spinner; spinner disappears after redirect
+- **Test Data:** N/A (visual/interaction verification)
