@@ -211,7 +211,7 @@
 
 - **Type:** Negative Case
 - **Priority:** Critical
-- **Spec Reference:** spec.md Section 8 DoD — "Each test case has: ID, type, priority, Spec Reference, precondition, steps, expected result"; SKILL.md Output Format — all 7 fields mandatory
+- **Spec Reference:** spec.md Section 10 DoD — "Each test case has: ID, type, priority, Technique, Spec Reference, precondition, steps, expected result"; SKILL.md Output Format — all 8 fields mandatory
 - **Precondition:** Skill is loaded and has generated output
 - **Steps:**
   1. Provide any valid spec
