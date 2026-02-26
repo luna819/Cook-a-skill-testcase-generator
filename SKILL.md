@@ -2,7 +2,7 @@
 name: Cook-a-skill-testcase-generator
 description: Reads a feature spec (.md) and generates a complete, structured list of test cases — Happy Path, Edge Case, Negative Case, and Security Case — with OWASP mapping, BVA/EP technique labels, AC Coverage Matrix, and anti-hallucination self-check.
 argument-hint: "[paste your spec.md content here]"
-user-invokable: true
+user-invocable: true
 metadata:
   version: v1.1
   category: QC / Testing
