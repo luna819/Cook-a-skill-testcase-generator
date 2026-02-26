@@ -1,3 +1,19 @@
+## Skill Card
+
+|               |                                                                          |
+| ------------- | ------------------------------------------------------------------------ |
+| **TRƯỚC**     | ~4 giờ/feature viết tay, miss edge case, không có traceability           |
+| **SAU**       | ~15 phút paste spec → full test suite + OWASP security cases + AC matrix |
+| **Tiết kiệm** | ~3.5 giờ/feature                                                         |
+
+|            |                                                                         |
+| ---------- | ----------------------------------------------------------------------- |
+| **BEFORE** | ~4 hrs/feature written manually, missed edge cases, no traceability     |
+| **AFTER**  | ~15 min paste spec → full test suite + OWASP security cases + AC matrix |
+| **Saved**  | ~3.5 hrs/feature                                                        |
+
+---
+
 # Skill Card: Test Case Generator
 
 |              |                                    |
@@ -52,7 +68,7 @@ Includes:
 
 ## Output
 
-### Per Test Case — 8 fields
+### Per Test Case — 9 fields
 
 | Field               | Description                                                                 |
 | ------------------- | --------------------------------------------------------------------------- |

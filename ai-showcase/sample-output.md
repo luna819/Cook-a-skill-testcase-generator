@@ -216,7 +216,7 @@
 - **Steps:**
   1. Provide any valid spec
   2. Review each generated test case in the output
-- **Expected Result:** Every test case contains all 7 required fields: ID, Type, Priority, Spec Reference, Precondition, Steps (at least 1 step), Expected Result; no field is blank or omitted; "Test Data" field is present even if value is "N/A"
+- **Expected Result:** Every test case contains all 8 required fields: ID, Type, Priority, Technique, Spec Reference, Precondition, Steps (at least 1 step), Expected Result; no field is blank or omitted; "Test Data" field is present even if value is "N/A"
 - **Test Data:** Any spec
 
 ---
@@ -281,7 +281,7 @@
 - **Expected Result:** Skill generates the following token security cases:
   - Clicking an already-used verification link → system must invalidate it after first use and show an appropriate message
   - Clicking a verification link with a tampered/guessed token (e.g., incrementing the token value) → system rejects it
-  Both cases are labeled **Security Case / Critical**
+    Both cases are labeled **Security Case / Critical**
 - **Test Data:** (a) Re-use the same verification link after account is verified; (b) Manually alter the `token=` parameter in the URL
 
 ---
